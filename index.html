@@ -60,6 +60,53 @@
           </p>
         </div>
 
+        <!-- PIPELINE & DISPLAY MODE TOOLBAR -->
+        <div class="pipeline-toolbar">
+          <div class="pipeline-group">
+            <span class="toolbar-label">Preprocessing Pipeline:</span>
+            <div class="segmented-control" id="pipelineSegmentedControl">
+              <button class="seg-btn active" data-pipeline="enhanced" id="btnPipeEnh" title="Facial landmark eye alignment + CLAHE local contrast">
+                <span class="seg-icon">✨</span>
+                <span class="seg-text">Landmark Aligned + CLAHE</span>
+                <span class="seg-badge">High Fidelity</span>
+              </button>
+              <button class="seg-btn" data-pipeline="baseline" id="btnPipeBase" title="scikit-learn standard static bounding box crop">
+                <span class="seg-icon">📐</span>
+                <span class="seg-text">Baseline (Raw Crop)</span>
+                <span class="seg-badge">scikit-learn</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="display-group">
+            <span class="toolbar-label">Rendering Mode:</span>
+            <div class="segmented-control" id="displaySegmentedControl">
+              <button class="seg-btn active" data-display="smooth" id="btnDisplaySmooth" title="Smooth bilinear sub-pixel interpolation">
+                <span class="seg-icon">🖼️</span>
+                <span class="seg-text">Smooth Filtered</span>
+              </button>
+              <button class="seg-btn" data-display="pixelated" id="btnDisplayPixel" title="Show raw 50x37 discrete matrix lattice">
+                <span class="seg-icon">🔲</span>
+                <span class="seg-text">Pixel Grid (50×37)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE EXPLAINER BANNER -->
+      <div class="pipeline-explainer-banner" id="pipelineExplainerBanner">
+        <div class="explainer-icon-col">💡</div>
+        <div class="explainer-text-col">
+          <strong id="pipelineExplainerTitle">Landmark Alignment + CLAHE Normalization Active</strong>
+          <p id="pipelineExplainerDesc">
+            Facial landmarks lock pupils to a horizontal baseline (eliminating head tilt, rotation, and scale variations). 
+            Contrast-Limited Adaptive Histogram Equalization (CLAHE) normalizes directional lighting shadows across local 6×6 tiles. 
+            Result: Eigenfaces encode true anatomical structure rather than ambient illumination, producing recognizable faces at lower K.
+          </p>
+        </div>
+      </div>
+
         <!-- PERSON SELECTION DROPDOWN & CATEGORY -->
         <div class="person-select-wrapper">
           <label for="personSelect" class="input-label">Select Famous Face</label>
@@ -304,7 +351,7 @@
             <span class="ef-tag">Baseline</span>
             <span class="ef-var">Centroid</span>
           </div>
-          <img src="data/eigenfaces/mean_face.png" alt="Average Face" class="ef-img">
+          <img id="meanFaceImg" src="data/eigenfaces/enh_mean_face.png" alt="Average Face" class="ef-img">
           <div class="ef-card-footer">
             <span class="ef-name">Average Face ($\boldsymbol{\mu}$)</span>
             <span class="ef-desc">Mean pixel intensity across all 1,288 training images</span>
@@ -369,7 +416,7 @@
             <div class="comp-images-row">
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Original</span>
-                <img src="data/images/george_w_bush.png" alt="George W. Bush Original" class="comp-img">
+                <img id="imgBushComp" src="data/images/george_w_bush_enh.png" alt="George W. Bush Original" class="comp-img">
               </div>
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Recon (K=20)</span>
@@ -377,7 +424,7 @@
               </div>
             </div>
             <div class="comp-stats">
-              <span>MSE @ K=20: <strong class="error-low">0.00237</strong></span>
+              <span>MSE @ K=20: <strong class="error-low" id="compStatBush">0.00237</strong></span>
               <span class="comp-status-good">✓ Rapid Convergence</span>
             </div>
           </div>
@@ -390,7 +437,7 @@
             <div class="comp-images-row">
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Original</span>
-                <img src="data/images/nelson_mandela.png" alt="Nelson Mandela Original" class="comp-img">
+                <img id="imgMandelaComp" src="data/images/nelson_mandela_enh.png" alt="Nelson Mandela Original" class="comp-img">
               </div>
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Recon (K=20)</span>
@@ -398,7 +445,7 @@
               </div>
             </div>
             <div class="comp-stats">
-              <span>MSE @ K=20: <strong>0.00271</strong></span>
+              <span>MSE @ K=20: <strong id="compStatMandela">0.00271</strong></span>
               <span class="comp-status-warn">Skin Tone Shifted</span>
             </div>
           </div>
@@ -411,7 +458,7 @@
             <div class="comp-images-row">
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Original</span>
-                <img src="data/images/megawati_sukarnoputri.png" alt="Megawati Sukarnoputri Original" class="comp-img">
+                <img id="imgMegawatiComp" src="data/images/megawati_sukarnoputri_enh.png" alt="Megawati Sukarnoputri Original" class="comp-img">
               </div>
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Recon (K=20)</span>
@@ -419,7 +466,7 @@
               </div>
             </div>
             <div class="comp-stats">
-              <span>MSE @ K=20: <strong class="error-high">0.01372</strong> (5.8× Bush)</span>
+              <span>MSE @ K=20: <strong class="error-high" id="compStatMegawati">0.01372</strong></span>
               <span class="comp-status-bad">⚠️ Severe Morphology Distortion</span>
             </div>
           </div>
@@ -432,7 +479,7 @@
             <div class="comp-images-row">
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Original</span>
-                <img src="data/images/serena_williams.png" alt="Serena Williams Original" class="comp-img">
+                <img id="imgSerenaComp" src="data/images/serena_williams_enh.png" alt="Serena Williams Original" class="comp-img">
               </div>
               <div class="comp-img-wrap">
                 <span class="comp-lbl">Recon (K=20)</span>

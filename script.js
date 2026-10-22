@@ -1,6 +1,7 @@
 /**
  * Eigenfaces & PCA Face Reconstruction Studio
  * Interactive Principal Component Analysis, Dynamic Linear Combinations & Bias Explorer
+ * Supports Baseline Raw Crop and Landmark Aligned + CLAHE Enhanced Pipelines
  */
 
 (function () {
@@ -10,6 +11,8 @@
   const state = {
     dataset: null,
     currentPersonId: 'george_w_bush',
+    currentPipeline: 'enhanced', // 'enhanced' or 'baseline'
+    displayMode: 'smooth',       // 'smooth' or 'pixelated'
     k: 20,
     isAnimating: false,
     animInterval: null,
@@ -30,6 +33,14 @@
     themeToggleBtn: document.getElementById('themeToggleBtn'),
     themeMoonIcon: document.getElementById('themeMoonIcon'),
     themeSunIcon: document.getElementById('themeSunIcon'),
+
+    // Pipeline & Display Toolbar
+    btnPipeEnh: document.getElementById('btnPipeEnh'),
+    btnPipeBase: document.getElementById('btnPipeBase'),
+    btnDisplaySmooth: document.getElementById('btnDisplaySmooth'),
+    btnDisplayPixel: document.getElementById('btnDisplayPixel'),
+    pipelineExplainerTitle: document.getElementById('pipelineExplainerTitle'),
+    pipelineExplainerDesc: document.getElementById('pipelineExplainerDesc'),
 
     // Person Selector & Profile
     personSelect: document.getElementById('personSelect'),
@@ -80,12 +91,20 @@
 
     // Gallery
     galleryGrid: document.getElementById('galleryGrid'),
+    meanFaceImg: document.getElementById('meanFaceImg'),
 
-    // Bias Comparison Canvases & Chart
+    // Bias Comparison Canvases, Images & Chart
     canvasBushComp: document.getElementById('canvasBushComp'),
     canvasMandelaComp: document.getElementById('canvasMandelaComp'),
     canvasMegawatiComp: document.getElementById('canvasMegawatiComp'),
     canvasSerenaComp: document.getElementById('canvasSerenaComp'),
+    imgBushComp: document.getElementById('imgBushComp'),
+    imgMandelaComp: document.getElementById('imgMandelaComp'),
+    imgMegawatiComp: document.getElementById('imgMegawatiComp'),
+    imgSerenaComp: document.getElementById('imgSerenaComp'),
+    compStatBush: document.getElementById('compStatBush'),
+    compStatMandela: document.getElementById('compStatMandela'),
+    compStatMegawati: document.getElementById('compStatMegawati'),
     chartMSE: document.getElementById('chartMSE')
   };
 
@@ -99,6 +118,7 @@
       console.log('Loaded faces_data.json successfully with', state.dataset.people.length, 'people.');
 
       setupEventListeners();
+      applyDisplayMode();
       renderGallery();
       initMixerSliders();
       updatePersonProfile();
@@ -138,6 +158,18 @@
 
   // --- EVENT LISTENERS ---
   function setupEventListeners() {
+    // Pipeline Switcher
+    if (el.btnPipeEnh && el.btnPipeBase) {
+      el.btnPipeEnh.addEventListener('click', () => setPipeline('enhanced'));
+      el.btnPipeBase.addEventListener('click', () => setPipeline('baseline'));
+    }
+
+    // Display Mode Switcher
+    if (el.btnDisplaySmooth && el.btnDisplayPixel) {
+      el.btnDisplaySmooth.addEventListener('click', () => setDisplayMode('smooth'));
+      el.btnDisplayPixel.addEventListener('click', () => setDisplayMode('pixelated'));
+    }
+
     // Person selection change
     el.personSelect.addEventListener('change', (e) => {
       state.currentPersonId = e.target.value;
@@ -178,12 +210,77 @@
       renderMixerCanvas();
     });
     el.mixerRandomBtn.addEventListener('click', () => {
-      // Draw weights from realistic Gaussian range for the first 6 components
       state.mixerWeights = state.mixerWeights.map(() => {
         return (Math.random() * 6 - 3).toFixed(2);
       });
       updateMixerSlidersUI();
       renderMixerCanvas();
+    });
+  }
+
+  // --- PIPELINE & DISPLAY MODE CONTROLS ---
+  function setPipeline(pipelineName) {
+    if (state.currentPipeline === pipelineName) return;
+    state.currentPipeline = pipelineName;
+
+    // Update buttons active state
+    if (el.btnPipeEnh && el.btnPipeBase) {
+      el.btnPipeEnh.classList.toggle('active', pipelineName === 'enhanced');
+      el.btnPipeBase.classList.toggle('active', pipelineName === 'baseline');
+    }
+
+    // Update explainer banner
+    if (el.pipelineExplainerTitle && el.pipelineExplainerDesc) {
+      if (pipelineName === 'enhanced') {
+        el.pipelineExplainerTitle.textContent = 'Landmark Alignment + CLAHE Normalization Active';
+        el.pipelineExplainerDesc.textContent =
+          'Facial landmarks lock pupils to a horizontal baseline (eliminating head tilt, rotation, and scale variations). ' +
+          'Contrast-Limited Adaptive Histogram Equalization (CLAHE) normalizes directional lighting shadows across local 6×6 tiles. ' +
+          'Result: Eigenfaces encode true anatomical structure rather than ambient illumination, producing recognizable faces at lower K.';
+      } else {
+        el.pipelineExplainerTitle.textContent = 'Baseline Raw Bounding Box Crop Active (scikit-learn Default)';
+        el.pipelineExplainerDesc.textContent =
+          'Standard static crop (78, 70, 172, 195) with no eye landmark normalization. ' +
+          'Uncontrolled head tilt and camera offsets smear facial features across the eigenvectors, and the first 3 components are heavily dominated by ambient illumination direction.';
+      }
+    }
+
+    // Update mean face image
+    if (el.meanFaceImg) {
+      el.meanFaceImg.src = pipelineName === 'enhanced'
+        ? 'data/eigenfaces/enh_mean_face.png'
+        : 'data/eigenfaces/mean_face.png';
+    }
+
+    renderGallery();
+    syncMixerWithCurrentPerson();
+    updateReconstruction();
+    renderBiasComparisonCanvases();
+    renderMSEChart();
+  }
+
+  function setDisplayMode(mode) {
+    if (state.displayMode === mode) return;
+    state.displayMode = mode;
+
+    if (el.btnDisplaySmooth && el.btnDisplayPixel) {
+      el.btnDisplaySmooth.classList.toggle('active', mode === 'smooth');
+      el.btnDisplayPixel.classList.toggle('active', mode === 'pixelated');
+    }
+
+    applyDisplayMode();
+  }
+
+  function applyDisplayMode() {
+    const allCanvases = document.querySelectorAll('.face-canvas, .comp-canvas');
+    allCanvases.forEach(canvas => {
+      if (state.displayMode === 'smooth') {
+        canvas.classList.add('smooth');
+        canvas.classList.remove('pixelated');
+      } else {
+        canvas.classList.add('pixelated');
+        canvas.classList.remove('smooth');
+      }
     });
   }
 
@@ -269,11 +366,14 @@
   function updateReconstruction() {
     if (!state.dataset) return;
 
+    const pipe = state.dataset[state.currentPipeline];
     const person = getCurrentPerson();
-    const meanFace = state.dataset.mean_face; // Float array (1850)
-    const eigenfaces = state.dataset.eigenfaces; // 80 arrays of (1850)
-    const weights = person.weights; // Float array (80)
-    const originalPixels = person.pixels; // Float array (1850)
+    const personPipe = person[state.currentPipeline];
+
+    const meanFace = pipe.meanFace;         // Float array (1850)
+    const eigenfaces = pipe.eigenfaces;     // 80 arrays of (1850)
+    const weights = personPipe.weights;     // Float array (80)
+    const originalPixels = personPipe.pixels; // Float array (1850)
     const K = state.k;
 
     // 1. Compute Linear Combination: recon = mean_face + sum_{k=0}^{K-1} w_k * ef_k
@@ -309,7 +409,7 @@
     const psnr = mse > 1e-9 ? (10 * Math.log10(1.0 / mse)) : 99.9;
     const cosine = (normOrig > 0 && normRecon > 0) ? (dotProd / (Math.sqrt(normOrig) * Math.sqrt(normRecon))) : 1.0;
     const compressionRatio = K > 0 ? (1850 / K).toFixed(1) : '∞';
-    const varExplained = K > 0 ? (state.dataset.cumulative_variance[K - 1] * 100).toFixed(1) + '%' : '0.0%';
+    const varExplained = K > 0 ? (pipe.cumulativeVariance[K - 1] * 100).toFixed(1) + '%' : '0.0%';
 
     // 4. Update Telemetry UI
     el.kValueBubble.textContent = `${K} ${K === 1 ? 'component' : 'components'}`;
@@ -322,13 +422,13 @@
       el.reconStatusText.textContent = 'Generic Centroid';
       el.reconStatusText.style.color = 'var(--text-muted)';
     } else if (K < 10) {
-      el.reconStatusText.textContent = 'Coarse Ghost Contours';
+      el.reconStatusText.textContent = state.currentPipeline === 'enhanced' ? 'Basic Structural Contours' : 'Coarse Ghost Contours';
       el.reconStatusText.style.color = 'var(--amber)';
     } else if (K < 30) {
-      el.reconStatusText.textContent = 'Facial Features Forming';
+      el.reconStatusText.textContent = state.currentPipeline === 'enhanced' ? 'Distinct Features & Likeness' : 'Facial Features Forming';
       el.reconStatusText.style.color = 'var(--accent)';
     } else {
-      el.reconStatusText.textContent = 'Recognizable Identity';
+      el.reconStatusText.textContent = 'High-Fidelity Identity';
       el.reconStatusText.style.color = 'var(--emerald)';
     }
 
@@ -339,21 +439,13 @@
     el.metricPSNR.textContent = `${psnr.toFixed(1)} dB`;
     el.metricCosine.textContent = cosine.toFixed(3);
 
-    // Color code MSE based on fidelity
-    if (mse < 0.004) {
-      el.metricMSE.style.color = 'var(--emerald)';
-    } else if (mse < 0.009) {
-      el.metricMSE.style.color = 'var(--amber)';
-    } else {
-      el.metricMSE.style.color = 'var(--rose)';
-    }
-
     // 5. Render Weights Bar Chart
     renderWeightsChart(weights, K);
   }
 
   // --- CANVAS RENDERING HELPERS ---
   function renderGrayscaleCanvas(canvas, pixelArray) {
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const imgData = ctx.createImageData(37, 50);
     const data = imgData.data;
@@ -371,6 +463,7 @@
   }
 
   function renderDifferenceHeatmap(canvas, original, recon) {
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const imgData = ctx.createImageData(37, 50);
     const data = imgData.data;
@@ -382,19 +475,16 @@
       // Heatmap colormap: Black -> Amber -> Bright Red -> White
       let r = 0, g = 0, b = 0;
       if (diff < 0.05) {
-        // Low difference (almost exact match): black to faint warm amber
         const t = diff / 0.05;
         r = Math.round(t * 120);
         g = Math.round(t * 60);
         b = 0;
       } else if (diff < 0.18) {
-        // Medium difference: rich amber to vibrant red
         const t = (diff - 0.05) / 0.13;
-        r = Math.round(120 + t * 135); // up to 255
+        r = Math.round(120 + t * 135);
         g = Math.round(60 + t * 40);
         b = Math.round(t * 30);
       } else {
-        // High difference: fiery red to bright white/yellow
         const t = Math.min(1.0, (diff - 0.18) / 0.3);
         r = 255;
         g = Math.round(100 + t * 155);
@@ -410,73 +500,99 @@
     ctx.putImageData(imgData, 0, 0);
   }
 
-  // --- WEIGHTS BAR CHART ---
-  function renderWeightsChart(weights, activeK) {
-    el.weightsChart.innerHTML = '';
-    const displayCount = Math.min(40, weights.length);
+  // --- PROJECTION WEIGHTS BAR CHART ---
+  function renderWeightsChart(weights, K) {
+    const container = el.weightsChart;
+    container.innerHTML = '';
+    const numDisplay = 24; // Show top 24 weights in chart
+    const maxWeight = 4.0; // Normalization threshold
 
-    for (let i = 0; i < displayCount; i++) {
-      const col = document.createElement('div');
-      col.className = 'weight-bar-col';
-      col.title = `Eigenface v_${i + 1}: weight = ${weights[i].toFixed(2)} ${i < activeK ? '(Active)' : '(Inactive)'}`;
+    const fragment = document.createDocumentFragment();
 
-      const w = weights[i];
-      const maxRange = 5.0; // scale relative to standard eigenface weight ranges
-      const barHeightPct = Math.min(100, (Math.abs(w) / maxRange) * 100);
+    for (let i = 0; i < numDisplay; i++) {
+      const w = weights[i] || 0;
+      const isIncluded = i < K;
+      const absNorm = Math.min(1.0, Math.abs(w) / maxWeight);
+      const heightPct = Math.max(4, Math.round(absNorm * 90));
+
+      const barWrap = document.createElement('div');
+      barWrap.className = `weight-bar-wrap ${isIncluded ? 'included' : 'excluded'}`;
+      barWrap.title = `Eigenface v_${i + 1}: w_${i + 1} = ${w.toFixed(2)}${isIncluded ? ' (Active)' : ' (Discarded)'}`;
 
       const bar = document.createElement('div');
-      if (w >= 0) {
-        bar.className = 'weight-bar-pos';
-        bar.style.height = `${barHeightPct}%`;
-      } else {
-        bar.className = 'weight-bar-neg';
-        bar.style.height = `${barHeightPct}%`;
-      }
+      bar.className = `weight-bar ${w >= 0 ? 'positive' : 'negative'}`;
+      bar.style.height = `${heightPct}%`;
 
-      if (i >= activeK) {
-        bar.style.opacity = '0.18';
-        bar.style.boxShadow = 'none';
-      }
+      const label = document.createElement('span');
+      label.className = 'weight-label';
+      label.textContent = `${i + 1}`;
 
-      col.appendChild(bar);
-      el.weightsChart.appendChild(col);
+      barWrap.appendChild(bar);
+      barWrap.appendChild(label);
+      fragment.appendChild(barWrap);
     }
+
+    container.appendChild(fragment);
   }
 
   // --- EIGENFACE GALLERY RENDERING ---
   function renderGallery() {
+    if (!state.dataset) return;
+    el.galleryGrid.innerHTML = '';
+
+    const pipe = state.dataset[state.currentPipeline];
+    const prefix = state.currentPipeline === 'enhanced' ? 'enh_' : '';
+
+    // 1. Average Face Card
+    const avgCard = document.createElement('div');
+    avgCard.className = 'ef-card highlight-ef-card';
+    avgCard.innerHTML = `
+      <div class="ef-card-top">
+        <span class="ef-tag">${state.currentPipeline === 'enhanced' ? 'Aligned CLAHE' : 'Baseline'}</span>
+        <span class="ef-var">Centroid</span>
+      </div>
+      <img src="data/eigenfaces/${prefix}mean_face.png" alt="Average Face" class="ef-img">
+      <div class="ef-card-footer">
+        <span class="ef-name">Average Face ($\boldsymbol{\mu}$)</span>
+        <span class="ef-desc">${state.currentPipeline === 'enhanced' ? 'Pupil-aligned, CLAHE-normalized centroid' : 'Raw pixel mean of 1,288 training images'}</span>
+      </div>
+    `;
+    avgCard.addEventListener('click', () => setK(0));
+    el.galleryGrid.appendChild(avgCard);
+
+    // 2. Top 16 Eigenface Cards
     const fragment = document.createDocumentFragment();
+
+    const featureHints = [
+      'Horizontal Illumination / Key Light',
+      'Vertical Ambient Light / Forehead',
+      'Face Elongation & Jawline Shape',
+      'Eye Sockets & Nose Bridge Depth',
+      'Mouth Curvature & Smile Expression',
+      'Hairline & Upper Contour Boundary',
+      'Eyebrow Contrast & Brow Ridge',
+      'Nasolabial Folds & Laugh Lines',
+      'Cheek Shadow & Skin Specularity',
+      'Nostril Depth & Lip Thickness',
+      'Temple Width & Ear Angle',
+      'Chin Cleft & Lower Shadow',
+      'Eye Aperture & Gaze Intensity',
+      'Facial Wrinkles & Skin Texture',
+      'Flash Reflection & Specular Sheen',
+      'High-Frequency Facial Contours'
+    ];
 
     for (let i = 0; i < 16; i++) {
       const card = document.createElement('div');
       card.className = 'ef-card';
-      const varPct = (state.dataset.variance_ratio[i] * 100).toFixed(1);
-
-      const featureHints = [
-        'Horizontal Illumination / Key Light',
-        'Vertical Ambient Light / Forehead',
-        'Face Elongation & Jawline Shape',
-        'Eye Sockets & Nose Bridge Prominence',
-        'Mouth Curvature & Smile Expression',
-        'Hairline & Upper Contour Boundary',
-        'Eyebrow Contrast & Brow Ridge',
-        'Nasolabial Folds & Laugh Lines',
-        'Cheek Shadow & Skin Specularity',
-        'Nostril Depth & Lip Thickness',
-        'Temple Width & Ear Angle',
-        'Chin Cleft & Lower Shadow',
-        'Eye Aperture & Gaze Intensity',
-        'Facial Wrinkles & Skin Texture',
-        'Flash Reflection & Specular Sheen',
-        'High-Frequency Facial Contours'
-      ];
+      const varPct = (pipe.explainedVarianceRatio[i] * 100).toFixed(1);
 
       card.innerHTML = `
         <div class="ef-card-top">
           <span class="ef-tag">EF #${i + 1}</span>
           <span class="ef-var">${varPct}% var</span>
         </div>
-        <img src="data/eigenfaces/eigenface_${i + 1}.png" alt="Eigenface ${i + 1}" class="ef-img" loading="lazy">
+        <img src="data/eigenfaces/${prefix}eigenface_${i + 1}.png" alt="Eigenface ${i + 1}" class="ef-img" loading="lazy">
         <div class="ef-card-footer">
           <span class="ef-name">Eigenface $\\mathbf{v}_{${i + 1}}$</span>
           <span class="ef-desc">${featureHints[i]}</span>
@@ -484,7 +600,6 @@
       `;
 
       card.addEventListener('click', () => {
-        // Set K to include this eigenface
         setK(i + 1);
       });
 
@@ -498,9 +613,10 @@
   function initMixerSliders() {
     el.mixerSlidersContainer.innerHTML = '';
     const person = getCurrentPerson();
+    const personPipe = person[state.currentPipeline];
 
     for (let i = 0; i < 6; i++) {
-      state.mixerWeights[i] = person.weights[i];
+      state.mixerWeights[i] = personPipe.weights[i];
 
       const card = document.createElement('div');
       card.className = 'mixer-slider-card';
@@ -510,20 +626,18 @@
             <span class="mixer-ef-label">Eigenface $\\mathbf{v}_{${i + 1}}$</span>
             <span class="mixer-ef-desc">${state.mixerDescriptions[i]}</span>
           </div>
-          <span class="mixer-val-text" id="mixerValText_${i}">${person.weights[i].toFixed(2)}</span>
+          <span class="mixer-val-text" id="mixerValText_${i}">${personPipe.weights[i].toFixed(2)}</span>
         </div>
-        <input type="range" id="mixerSlider_${i}" min="-6" max="6" step="0.1" value="${person.weights[i]}" class="range-slider">
+        <input type="range" id="mixerSlider_${i}" min="-6" max="6" step="0.1" value="${personPipe.weights[i]}" class="range-slider">
       `;
 
       el.mixerSlidersContainer.appendChild(card);
 
       const slider = card.querySelector(`#mixerSlider_${i}`);
-      const valText = card.querySelector(`#mixerValText_${i}`);
-
       slider.addEventListener('input', (e) => {
         const val = parseFloat(e.target.value);
         state.mixerWeights[i] = val;
-        valText.textContent = val.toFixed(2);
+        card.querySelector(`#mixerValText_${i}`).textContent = val.toFixed(2);
         renderMixerCanvas();
       });
     }
@@ -533,8 +647,9 @@
 
   function syncMixerWithCurrentPerson() {
     const person = getCurrentPerson();
+    const personPipe = person[state.currentPipeline];
     for (let i = 0; i < 6; i++) {
-      state.mixerWeights[i] = person.weights[i];
+      state.mixerWeights[i] = personPipe.weights[i];
     }
     updateMixerSlidersUI();
     renderMixerCanvas();
@@ -547,16 +662,15 @@
       if (slider && valText) {
         slider.value = state.mixerWeights[i];
         valText.textContent = parseFloat(state.mixerWeights[i]).toFixed(2);
-        const progress = ((parseFloat(state.mixerWeights[i]) + 6) / 12) * 100;
-        slider.style.setProperty('--progress', `${progress}%`);
       }
     }
   }
 
   function renderMixerCanvas() {
     if (!state.dataset) return;
-    const meanFace = state.dataset.mean_face;
-    const eigenfaces = state.dataset.eigenfaces;
+    const pipe = state.dataset[state.currentPipeline];
+    const meanFace = pipe.meanFace;
+    const eigenfaces = pipe.eigenfaces;
 
     const synth = new Float32Array(1850);
     for (let i = 0; i < 1850; i++) {
@@ -573,32 +687,49 @@
   // --- BIAS COMPARISON CANVASES ---
   function renderBiasComparisonCanvases() {
     if (!state.dataset) return;
+    const pipe = state.dataset[state.currentPipeline];
+    const meanFace = pipe.meanFace;
+    const eigenfaces = pipe.eigenfaces;
+    const K = 20;
+
     const targetPeople = [
-      { id: 'george_w_bush', canvas: el.canvasBushComp },
-      { id: 'nelson_mandela', canvas: el.canvasMandelaComp },
-      { id: 'megawati_sukarnoputri', canvas: el.canvasMegawatiComp },
-      { id: 'serena_williams', canvas: el.canvasSerenaComp }
+      { id: 'george_w_bush', canvas: el.canvasBushComp, imgEl: el.imgBushComp, statEl: el.compStatBush },
+      { id: 'nelson_mandela', canvas: el.canvasMandelaComp, imgEl: el.imgMandelaComp, statEl: el.compStatMandela },
+      { id: 'megawati_sukarnoputri', canvas: el.canvasMegawatiComp, imgEl: el.imgMegawatiComp, statEl: el.compStatMegawati },
+      { id: 'serena_williams', canvas: el.canvasSerenaComp, imgEl: el.imgSerenaComp }
     ];
 
-    const meanFace = state.dataset.mean_face;
-    const eigenfaces = state.dataset.eigenfaces;
-    const K = 20; // Fixed comparison depth
-
-    targetPeople.forEach(({ id, canvas }) => {
+    targetPeople.forEach(({ id, canvas, imgEl, statEl }) => {
       const person = state.dataset.people.find(p => p.id === id);
-      if (!person || !canvas) return;
+      if (!person) return;
 
-      const recon = new Float32Array(1850);
-      for (let i = 0; i < 1850; i++) {
-        let val = meanFace[i];
-        for (let k = 0; k < K; k++) {
-          val += person.weights[k] * eigenfaces[k][i];
-        }
-        recon[i] = Math.max(0, Math.min(1.0, val));
+      const pData = person[state.currentPipeline];
+
+      // Update original photo preview
+      if (imgEl) {
+        imgEl.src = state.currentPipeline === 'enhanced' ? person.imageEnh : person.image;
       }
 
-      renderGrayscaleCanvas(canvas, recon);
+      // Update canvas reconstruction
+      if (canvas) {
+        const recon = new Float32Array(1850);
+        for (let i = 0; i < 1850; i++) {
+          let val = meanFace[i];
+          for (let k = 0; k < K; k++) {
+            val += pData.weights[k] * eigenfaces[k][i];
+          }
+          recon[i] = Math.max(0, Math.min(1.0, val));
+        }
+        renderGrayscaleCanvas(canvas, recon);
+      }
+
+      // Update MSE stat callout
+      if (statEl && pData.mseCurve['20']) {
+        statEl.textContent = pData.mseCurve['20'].toFixed(5);
+      }
     });
+
+    applyDisplayMode();
   }
 
   // --- MSE GENERALIZATION GAP CHART (HTML5 CANVAS) ---
@@ -624,11 +755,9 @@
     const chartW = width - pLeft - pRight;
     const chartH = height - pTop - pBottom;
 
-    // Max MSE across curves for Y scaling
-    const maxMSE = 0.025; // fixed scale for easy reading
+    const maxMSE = 0.025;
     const kSteps = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80];
 
-    // Helper coordinates
     function getX(kVal) {
       return pLeft + (kVal / 80) * chartW;
     }
@@ -650,12 +779,12 @@
       ctx.lineTo(width - pRight, y);
       ctx.stroke();
 
-      ctx.fillText(mse.toFixed(3), pLeft - 8, y + 4);
+      ctx.fillText(mse.toFixed(3), pLeft - 8, y + 3);
     }
 
-    // X-axis labels
+    // 2. X-axis Grid Lines & labels
     ctx.textAlign = 'center';
-    for (let k = 0; k <= 80; k += 10) {
+    for (let k = 0; k <= 80; k += 20) {
       const x = getX(k);
       ctx.strokeStyle = gridColor;
       ctx.beginPath();
@@ -663,70 +792,83 @@
       ctx.lineTo(x, pTop + chartH);
       ctx.stroke();
 
-      ctx.fillText(`K=${k}`, x, pTop + chartH + 18);
+      ctx.fillText(`K=${k}`, x, height - pBottom + 16);
     }
 
-    // 2. Draw Curves for 4 People
-    const series = [
-      { id: 'george_w_bush', color: '#10b981', width: 2.8 },
-      { id: 'nelson_mandela', color: '#06b6d4', width: 2.2 },
-      { id: 'megawati_sukarnoputri', color: '#f43f5e', width: 2.8 },
-      { id: 'serena_williams', color: '#f59e0b', width: 2.2 }
+    // Axis titles
+    ctx.save();
+    ctx.translate(14, pTop + chartH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = '11px "Outfit", sans-serif';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.fillText('Mean Squared Error (MSE)', 0, 0);
+    ctx.restore();
+
+    ctx.font = '11px "Outfit", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Number of Eigenfaces (K)', pLeft + chartW / 2, height - 8);
+
+    // 3. Draw Curves for Representative People
+    const lines = [
+      { id: 'george_w_bush', label: 'George W. Bush (41% In-Distribution)', color: '#10b981', dash: [] },
+      { id: 'nelson_mandela', label: 'Nelson Mandela (African Male)', color: '#06b6d4', dash: [] },
+      { id: 'serena_williams', label: 'Serena Williams (Black Female)', color: '#f59e0b', dash: [4, 4] },
+      { id: 'megawati_sukarnoputri', label: 'Megawati Sukarnoputri (Asian Female)', color: '#f43f5e', dash: [] }
     ];
 
-    series.forEach(({ id, color, width: strokeW }) => {
+    lines.forEach(({ id, color, dash }) => {
       const person = state.dataset.people.find(p => p.id === id);
       if (!person) return;
 
+      const mseCurve = person[state.currentPipeline].mseCurve;
       ctx.strokeStyle = color;
-      ctx.lineWidth = strokeW;
+      ctx.lineWidth = 2.2;
+      ctx.setLineDash(dash);
       ctx.beginPath();
 
-      kSteps.forEach((k, idx) => {
-        const mse = person.mse_curve[k.toString()];
-        const x = getX(k);
-        const y = getY(mse);
-
-        if (idx === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+      kSteps.forEach((kVal, idx) => {
+        const val = mseCurve[String(kVal)];
+        if (val !== undefined) {
+          const x = getX(kVal);
+          const y = getY(val);
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
       });
       ctx.stroke();
+      ctx.setLineDash([]);
 
-      // Draw dots
-      ctx.fillStyle = color;
-      kSteps.forEach(k => {
-        const mse = person.mse_curve[k.toString()];
-        const x = getX(k);
-        const y = getY(mse);
-        ctx.beginPath();
-        ctx.arc(x, y, 3, 0, Math.PI * 2);
-        ctx.fill();
+      // Point dots
+      kSteps.forEach(kVal => {
+        const val = mseCurve[String(kVal)];
+        if (val !== undefined) {
+          const x = getX(kVal);
+          const y = getY(val);
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
     });
 
-    // 3. Current K Marker Line
-    if (state.k > 0) {
-      const currX = getX(state.k);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(currX, pTop);
-      ctx.lineTo(currX, pTop + chartH);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px "Outfit", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Current K = ${state.k}`, currX, pTop - 6);
-    }
+    // 4. Draw Current K Vertical Indicator
+    const curX = getX(state.k);
+    ctx.strokeStyle = isLight ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(curX, pTop);
+    ctx.lineTo(curX, pTop + chartH);
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
-  // --- START WHEN DOM READY ---
-  document.addEventListener('DOMContentLoaded', init);
-
+  // --- START THE STUDIO ---
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();

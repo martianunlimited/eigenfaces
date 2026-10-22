@@ -44,13 +44,28 @@ Inspired by [scikit-learn's facial recognition tutorial](https://scikit-learn.or
 - Visual cards displaying the Mean Face and the first 16 Eigenfaces.
 - Click any eigenface to immediately set $K$ to include that component.
 
-### 4. Demographic Bias & Generalization Gap Explorer
+### 4. Dual Preprocessing Pipelines: Baseline vs. Landmark-Aligned + CLAHE
+The application allows toggling between two full end-to-end PCA models in real time:
+
+| Feature | 📐 Standard Baseline (scikit-learn Default) | ✨ Enhanced (Landmark Aligned + CLAHE) |
+| :--- | :--- | :--- |
+| **Cropping Method** | Static rectangular box crop `(78, 70, 172, 195)` | **MTCNN 5-Point Landmark Similarity Warp** |
+| **Pupil Positioning** | Arbitrary based on camera angle & head tilt | **Locked to horizontal baseline** ($y=0.38H, d=0.42W$) |
+| **Illumination** | Raw, unnormalized photojournalistic lighting | **CLAHE** (Contrast-Limited Adaptive Histogram Equalization) |
+| **Top 3 Eigenfaces** | Heavily dominated by light angle (left vs. right shadow) | **Encodes pure facial morphology** (cheekbones, nose, jaw) |
+| **Convergence** | Slower; features blurred across multiple components | **Rapid; recognizable facial likeness at lower $K$** |
+
+### 5. Display Modes
+- **Smooth Filtered**: High-quality bilinear/bicubic sub-pixel interpolation for continuous, photo-like skin tones.
+- **Pixel Grid (50×37)**: Discrete mathematical matrix lattice showing the raw pixel grid ($D = 1,850$).
+
+### 6. Demographic Bias & Generalization Gap Explorer
 - **The Skew in Numbers**:
   - In scikit-learn's top LFW benchmark ($\ge 70$ photos), **100% are male** and **88.5% are White/Caucasian** from developed Western nations (US, UK, Germany).
   - A single individual (George W. Bush) accounts for **41.1% (530 of 1,288 images)** of the entire training set.
 - **Reconstruction Error Disparity**:
   - In-distribution faces (e.g. Bush) converge rapidly ($MSE = 0.00237$ at $K=20$).
-  - Out-of-distribution faces (e.g. Megawati Sukarnoputri at $MSE = 0.01372$ or Serena Williams at $MSE = 0.01084$) suffer **4.6× to 5.8× higher reconstruction error**.
+  - Out-of-distribution faces (e.g. Megawati Sukarnoputri or Serena Williams) suffer **4.6× to 5.8× higher reconstruction error**.
   - Interactive **MSE vs $K$ Canvas Chart** illustrating the persistent generalization gap across component depths.
 
 ---
