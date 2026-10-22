@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eigenfaces & PCA Face Reconstruction Studio — Exploring Dimensionality & Representation Bias</title>
+  <meta name="description" content="Interactive web demonstration of Eigenfaces and Principal Component Analysis (PCA) face reconstruction using scikit-learn's LFW dataset. Explore linear combinations, compression, and algorithmic representation bias across global demographics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background-glow glow-1"></div>
+  <div class="background-glow glow-2"></div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="container header-container">
+      <div class="branding">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M9 10h.01"></path>
+            <path d="M15 10h.01"></path>
+            <path d="M9.5 15a3.5 3.5 0 0 0 5 0"></path>
+            <path d="M4 12h2"></path>
+            <path d="M18 12h2"></path>
+            <path d="M12 4v2"></path>
+            <path d="M12 18v2"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="app-title">Eigenfaces & PCA Studio</h1>
+          <p class="app-subtitle">Face Reconstruction via Principal Component Analysis & Dataset Bias Explorer</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="https://scikit-learn.org/stable/auto_examples/applications/plot_face_recognition.html" target="_blank" rel="noopener noreferrer" class="sklearn-pill" title="View official scikit-learn tutorial">
+          <span class="sklearn-dot"></span> Inspired by scikit-learn LFW
+        </a>
+        <button id="themeToggleBtn" class="btn-icon" aria-label="Toggle dark/light theme" title="Toggle theme">
+          <svg id="themeMoonIcon" class="icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg id="themeSunIcon" class="icon hidden" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-layout">
+    <!-- SECTION 1: HERO RECONSTRUCTION STUDIO -->
+    <section class="card studio-card" id="reconstruction-studio">
+      <div class="studio-header-flex">
+        <div>
+          <span class="badge badge-accent">Core Interactive Demo</span>
+          <h2 class="card-heading">1. Linear Combination Face Reconstruction</h2>
+          <p class="card-description">
+            A human face ($\mathbf{x} \in \mathbb{R}^{1850}$) is approximated as the average face ($\boldsymbol{\mu}$) plus a weighted sum of $K$ orthogonal eigenfaces ($\mathbf{v}_k$):
+            <code class="math-code">\hat{\mathbf{x}}_K = \boldsymbol{\mu} + \sum_{k=1}^K w_k \mathbf{v}_k</code>
+          </p>
+        </div>
+
+        <!-- PERSON SELECTION DROPDOWN & CATEGORY -->
+        <div class="person-select-wrapper">
+          <label for="personSelect" class="input-label">Select Famous Face</label>
+          <div class="select-container">
+            <select id="personSelect" class="custom-select">
+              <optgroup label="🏛️ Standard LFW Training Benchmark (Western Skew)">
+                <option value="george_w_bush" selected>🇺🇸 George W. Bush (U.S. President — 41% of Training Set)</option>
+                <option value="tony_blair">🇬🇧 Tony Blair (UK Prime Minister)</option>
+                <option value="colin_powell">🇺🇸 Colin Powell (U.S. Secretary of State)</option>
+                <option value="gerhard_schroeder">🇩🇪 Gerhard Schröder (Chancellor of Germany)</option>
+                <option value="donald_rumsfeld">🇺🇸 Donald Rumsfeld (U.S. Secretary of Defense)</option>
+                <option value="hugo_chavez">🇻🇪 Hugo Chávez (President of Venezuela)</option>
+              </optgroup>
+              <optgroup label="🌍 Global Leaders & Developing Nations (Out-of-Distribution)">
+                <option value="nelson_mandela">🇿🇦 Nelson Mandela (President of South Africa, Nobel Laureate)</option>
+                <option value="kofi_annan">🇬🇭 Kofi Annan (UN Secretary-General, Ghana, Nobel Laureate)</option>
+                <option value="hu_jintao">🇨🇳 Hu Jintao (President of China)</option>
+                <option value="junichiro_koizumi">🇯🇵 Junichiro Koizumi (Prime Minister of Japan)</option>
+                <option value="megawati_sukarnoputri">🇮🇩 Megawati Sukarnoputri (President of Indonesia)</option>
+                <option value="mahathir_mohamad">🇲🇾 Mahathir Mohamad (Prime Minister of Malaysia)</option>
+                <option value="atal_bihari_vajpayee">🇮🇳 Atal Bihari Vajpayee (Prime Minister of India)</option>
+                <option value="luiz_inacio_lula_da_silva">🇧🇷 Luiz Inácio Lula da Silva (President of Brazil)</option>
+                <option value="vicente_fox">🇲🇽 Vicente Fox (President of Mexico)</option>
+                <option value="hamid_karzai">🇦🇫 Hamid Karzai (President of Afghanistan)</option>
+              </optgroup>
+              <optgroup label="🎭 Women, Sports & Cultural Icons">
+                <option value="serena_williams">🇺🇸 Serena Williams (23-time Grand Slam Champion)</option>
+                <option value="gloria_macapagal_arroyo">🇵🇭 Gloria Macapagal-Arroyo (President of Philippines)</option>
+                <option value="salma_hayek">🇲🇽 Salma Hayek (Mexican Actress & Producer)</option>
+                <option value="jackie_chan">🇭🇰 Jackie Chan (Hong Kong Martial Artist & Actor)</option>
+                <option value="condoleezza_rice">🇺🇸 Condoleezza Rice (U.S. Secretary of State)</option>
+                <option value="jennifer_aniston">🇺🇸 Jennifer Aniston (American Actress)</option>
+                <option value="arnold_schwarzenegger">🇦🇹 Arnold Schwarzenegger (Governor & Cultural Icon)</option>
+                <option value="bill_clinton">🇺🇸 Bill Clinton (42nd U.S. President)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERSON PROFILE METADATA BANNER -->
+      <div class="person-profile-card" id="personProfileCard">
+        <div class="profile-left">
+          <span class="profile-flag" id="profileFlag">🇺🇸</span>
+          <div>
+            <div class="profile-name-row">
+              <h3 class="profile-name" id="profileName">George W. Bush</h3>
+              <span class="profile-tag" id="profileTrainingBadge">In scikit-learn Training Set (530 images)</span>
+            </div>
+            <p class="profile-role" id="profileRole">43rd President of the United States</p>
+            <p class="profile-bio" id="profileBio">Comprises over 41% of the entire scikit-learn training set.</p>
+          </div>
+        </div>
+        <div class="profile-right">
+          <span class="profile-demo-tag" id="profileDemoTag">White Male (Western Leader)</span>
+          <span class="profile-region-tag" id="profileRegionTag">North America</span>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE SLIDER BAR -->
+      <div class="control-box">
+        <div class="control-box-header">
+          <div class="k-label-group">
+            <span class="k-title">Number of Eigenfaces (<code class="math-code">K</code>):</span>
+            <span class="k-value-bubble" id="kValueBubble">20 components</span>
+          </div>
+          <div class="playback-controls">
+            <button id="animToggleBtn" class="pill-btn primary-pill" title="Watch face emerge as K increases">
+              <span id="animIcon">▶</span> <span id="animText">Animate Emergence</span>
+            </button>
+            <button id="resetKBtn" class="pill-btn" title="Reset to K=0 (Mean Face)">Mean Face (K=0)</button>
+          </div>
+        </div>
+
+        <div class="slider-wrapper">
+          <input type="range" id="kSlider" min="0" max="80" step="1" value="20" class="range-slider">
+          <div class="slider-ticks-k">
+            <span>0 (Mean Face)</span>
+            <span>5 (Contour)</span>
+            <span>15 (Features)</span>
+            <span>30 (Identity)</span>
+            <span>50 (High Detail)</span>
+            <span>80 (Full Eigenspace)</span>
+          </div>
+        </div>
+
+        <!-- QUICK PRESET JUMP BUTTONS -->
+        <div class="preset-buttons-row">
+          <span class="presets-label">Quick Snapshots:</span>
+          <button class="snap-btn" data-k="0">K=0 (Average Face)</button>
+          <button class="snap-btn" data-k="3">K=3 (Ghost Illumination)</button>
+          <button class="snap-btn" data-k="10">K=10 (Facial Structure)</button>
+          <button class="snap-btn active" data-k="20">K=20 (Recognizable)</button>
+          <button class="snap-btn" data-k="50">K=50 (Fine Fidelity)</button>
+          <button class="snap-btn" data-k="80">K=80 (Max Basis)</button>
+        </div>
+      </div>
+
+      <!-- CANVAS DISPLAY TRIO: ORIGINAL vs RECONSTRUCTED vs RESIDUAL MAP -->
+      <div class="visual-trio-grid">
+        <!-- 1. ORIGINAL PHOTOGRAPH -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">1. Ground Truth Target ($\mathbf{x}$)</span>
+            <span class="canvas-badge badge-orig">Original Image</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="canvasOriginal" width="37" height="50" class="face-canvas"></canvas>
+          </div>
+          <div class="canvas-footer">
+            <span>Raw Resolution: <strong>50 × 37 px</strong></span>
+            <span>1,850 Dimensions</span>
+          </div>
+        </div>
+
+        <!-- 2. PCA RECONSTRUCTION -->
+        <div class="canvas-card highlight-canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">2. Linear Combination ($\hat{\mathbf{x}}_K$)</span>
+            <span class="canvas-badge badge-recon" id="reconBadge">K = 20 Components</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="canvasRecon" width="37" height="50" class="face-canvas"></canvas>
+            <div id="canvasGlow" class="recon-glow"></div>
+          </div>
+          <div class="canvas-footer">
+            <span id="reconEquationDisplay">$\boldsymbol{\mu} + \sum_{k=1}^{20} w_k \mathbf{v}_k$</span>
+            <span class="recon-status-text" id="reconStatusText">Identity Formed</span>
+          </div>
+        </div>
+
+        <!-- 3. RESIDUAL DIFFERENCE HEATMAP -->
+        <div class="canvas-card">
+          <div class="canvas-header">
+            <span class="canvas-title">3. Missing Detail / Error Map</span>
+            <span class="canvas-badge badge-diff">Residual $|\mathbf{x} - \hat{\mathbf{x}}_K|$</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="canvasDiff" width="37" height="50" class="face-canvas"></canvas>
+          </div>
+          <div class="canvas-footer">
+            <span>Black = Exact Match</span>
+            <span class="diff-colormap-legend"><span class="cmap-swatch"></span> Error Gradient</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE DIAGNOSTIC TELEMETRY STRIP -->
+      <div class="telemetry-strip">
+        <div class="telemetry-item">
+          <span class="telemetry-lbl">Compression Ratio</span>
+          <span class="telemetry-val" id="metricCompression">92.5×</span>
+          <span class="telemetry-sub" id="metricCompressionSub">1,850 px &rarr; 20 weights</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-lbl">Variance Explained</span>
+          <span class="telemetry-val" id="metricVariance">74.8%</span>
+          <span class="telemetry-sub">of dataset variance captured</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-lbl">Reconstruction Error (MSE)</span>
+          <span class="telemetry-val" id="metricMSE">0.00237</span>
+          <span class="telemetry-sub" id="metricMSESub">Mean Squared Pixel Error</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-lbl">Peak Signal-to-Noise (PSNR)</span>
+          <span class="telemetry-val" id="metricPSNR">26.3 dB</span>
+          <span class="telemetry-sub">Fidelity relative to original</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-lbl">Cosine Similarity</span>
+          <span class="telemetry-val" id="metricCosine">0.984</span>
+          <span class="telemetry-sub">Directional alignment</span>
+        </div>
+      </div>
+
+      <!-- TOP CONTRIBUTING EIGENFACE WEIGHTS BAR CHART -->
+      <div class="weights-breakdown-card">
+        <div class="weights-header">
+          <h4 class="weights-title">Active Projection Weights ($w_k = (\mathbf{x} - \boldsymbol{\mu}) \cdot \mathbf{v}_k$) for Top Components</h4>
+          <span class="weights-subtitle">Positive weights (cyan) add features; negative weights (amber) invert them</span>
+        </div>
+        <div class="weights-chart" id="weightsChart">
+          <!-- Rendered dynamically by script.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: INTERACTIVE EIGENFACE SYNTHESIZER / MIXER -->
+    <section class="card mixer-card" id="eigenface-mixer">
+      <div class="card-header-flex">
+        <div>
+          <span class="badge badge-warning">Interactive Synthesizer</span>
+          <h2 class="card-heading">2. Eigenface Feature Mixer & Face Generator</h2>
+          <p class="card-description">
+            Manipulate the projection weights ($w_1 \dots w_6$) directly to see what features each principal component controls, or synthesize brand new hypothetical faces!
+          </p>
+        </div>
+        <div class="mixer-actions">
+          <button id="mixerResetBtn" class="pill-btn">Reset to Current Person</button>
+          <button id="mixerZeroBtn" class="pill-btn">Zero Weights (Mean Face)</button>
+          <button id="mixerRandomBtn" class="pill-btn primary-pill">🎲 Random Synthetic Face</button>
+        </div>
+      </div>
+
+      <div class="mixer-grid">
+        <!-- Interactive Weight Sliders -->
+        <div class="mixer-sliders-column" id="mixerSlidersContainer">
+          <!-- Dynamically populated in script.js -->
+        </div>
+
+        <!-- Synthesized Output Preview -->
+        <div class="mixer-preview-card">
+          <span class="preview-tag">Synthesized Result</span>
+          <canvas id="canvasMixerPreview" width="37" height="50" class="face-canvas mixer-canvas"></canvas>
+          <p class="mixer-preview-desc" id="mixerPreviewDesc">
+            Custom linear combination of eigenfaces generated in real-time.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: EIGENFACE GALLERY (THE TOP 16 COMPONENTS) -->
+    <section class="card gallery-card" id="eigenface-gallery">
+      <div class="card-header-flex">
+        <div>
+          <span class="badge badge-primary">Orthogonal Basis</span>
+          <h2 class="card-heading">3. Eigenface Basis Gallery (Top 16 Components)</h2>
+          <p class="card-description">
+            Each eigenface $\mathbf{v}_k$ is an eigenvector of the facial pixel covariance matrix. They capture correlated structures like lighting angles, face width, and shadow gradients.
+          </p>
+        </div>
+        <div class="gallery-legend">
+          <span class="legend-swatch bone-swatch"></span> Grayscale Normalized
+        </div>
+      </div>
+
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- Average Face Card -->
+        <div class="ef-card highlight-ef-card">
+          <div class="ef-card-top">
+            <span class="ef-tag">Baseline</span>
+            <span class="ef-var">Centroid</span>
+          </div>
+          <img src="data/eigenfaces/mean_face.png" alt="Average Face" class="ef-img">
+          <div class="ef-card-footer">
+            <span class="ef-name">Average Face ($\boldsymbol{\mu}$)</span>
+            <span class="ef-desc">Mean pixel intensity across all 1,288 training images</span>
+          </div>
+        </div>
+        <!-- 16 Eigenface cards rendered dynamically by script.js -->
+      </div>
+    </section>
+
+    <!-- SECTION 4: DEMOGRAPHIC BIAS & GEOGRAPHIC SKEW (PEDAGOGICAL CORE) -->
+    <section class="card bias-card" id="demographic-bias">
+      <div class="card-header-flex">
+        <div>
+          <span class="badge badge-danger">Algorithmic Fairness & Bias</span>
+          <h2 class="card-heading">4. Data Skew & Representation Disparity</h2>
+          <p class="card-description">
+            Why does PCA reconstruct George W. Bush effortlessly while underrepresented demographics suffer high error? The mathematical consequence of training on biased distributions.
+          </p>
+        </div>
+      </div>
+
+      <!-- SKEW STATS INFOGRAPHIC ROW -->
+      <div class="skew-stats-grid">
+        <div class="skew-stat-item">
+          <div class="skew-number skew-male">100%</div>
+          <div class="skew-label">Male Training Set</div>
+          <div class="skew-detail">All 7 people with &ge;70 images in scikit-learn's standard benchmark are male. (0% female representation).</div>
+        </div>
+
+        <div class="skew-stat-item">
+          <div class="skew-number skew-white">88.5%</div>
+          <div class="skew-label">White / Western Caucasian</div>
+          <div class="skew-detail">6 of 7 top benchmark figures are Caucasian leaders from the US, UK, and Germany.</div>
+        </div>
+
+        <div class="skew-stat-item">
+          <div class="skew-number skew-bush">41.1%</div>
+          <div class="skew-label">George W. Bush Alone</div>
+          <div class="skew-detail">530 out of 1,288 images belong to a single individual, heavily warping the first principal directions.</div>
+        </div>
+
+        <div class="skew-stat-item">
+          <div class="skew-number skew-dev">5.5%</div>
+          <div class="skew-label">Developing Nations Share</div>
+          <div class="skew-detail">Only Hugo Chávez (Venezuela, 71 images) represents the Global South in the &ge;70 benchmark.</div>
+        </div>
+      </div>
+
+      <!-- DEMOGRAPHIC RECONSTRUCTION COMPARISON (SIDE-BY-SIDE PROOF) -->
+      <div class="demographic-comparison-panel">
+        <div class="demo-panel-header">
+          <h3 class="demo-panel-title">Visual Proof: Reconstructing In-Distribution vs Out-of-Distribution Faces at $K = 20$</h3>
+          <p class="demo-panel-sub">Observe how out-of-distribution faces are washed toward the Western male mean face and carry significantly higher residual error.</p>
+        </div>
+
+        <div class="comparison-cards-grid">
+          <!-- Card A: Bush (In-Distribution) -->
+          <div class="comp-card in-dist-card">
+            <div class="comp-card-badge in-dist-badge">In-Distribution (41% of data)</div>
+            <div class="comp-name">George W. Bush 🇺🇸</div>
+            <div class="comp-meta">White Western Male</div>
+            <div class="comp-images-row">
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Original</span>
+                <img src="data/images/george_w_bush.png" alt="George W. Bush Original" class="comp-img">
+              </div>
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Recon (K=20)</span>
+                <canvas id="canvasBushComp" width="37" height="50" class="comp-canvas"></canvas>
+              </div>
+            </div>
+            <div class="comp-stats">
+              <span>MSE @ K=20: <strong class="error-low">0.00237</strong></span>
+              <span class="comp-status-good">✓ Rapid Convergence</span>
+            </div>
+          </div>
+
+          <!-- Card B: Nelson Mandela (African Leader, Out-of-Distribution) -->
+          <div class="comp-card out-dist-card">
+            <div class="comp-card-badge out-dist-badge">Out-of-Distribution (0.3% of data)</div>
+            <div class="comp-name">Nelson Mandela 🇿🇦</div>
+            <div class="comp-meta">Black African Male</div>
+            <div class="comp-images-row">
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Original</span>
+                <img src="data/images/nelson_mandela.png" alt="Nelson Mandela Original" class="comp-img">
+              </div>
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Recon (K=20)</span>
+                <canvas id="canvasMandelaComp" width="37" height="50" class="comp-canvas"></canvas>
+              </div>
+            </div>
+            <div class="comp-stats">
+              <span>MSE @ K=20: <strong>0.00271</strong></span>
+              <span class="comp-status-warn">Skin Tone Shifted</span>
+            </div>
+          </div>
+
+          <!-- Card C: Megawati Sukarnoputri (Southeast Asian Female) -->
+          <div class="comp-card out-dist-card">
+            <div class="comp-card-badge out-dist-badge">Out-of-Distribution (Gender & Ethnicity)</div>
+            <div class="comp-name">Megawati Sukarnoputri 🇮🇩</div>
+            <div class="comp-meta">Southeast Asian Female</div>
+            <div class="comp-images-row">
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Original</span>
+                <img src="data/images/megawati_sukarnoputri.png" alt="Megawati Sukarnoputri Original" class="comp-img">
+              </div>
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Recon (K=20)</span>
+                <canvas id="canvasMegawatiComp" width="37" height="50" class="comp-canvas"></canvas>
+              </div>
+            </div>
+            <div class="comp-stats">
+              <span>MSE @ K=20: <strong class="error-high">0.01372</strong> (5.8× Bush)</span>
+              <span class="comp-status-bad">⚠️ Severe Morphology Distortion</span>
+            </div>
+          </div>
+
+          <!-- Card D: Serena Williams (Black Female Athlete) -->
+          <div class="comp-card out-dist-card">
+            <div class="comp-card-badge out-dist-badge">Out-of-Distribution (Gender & Skin Tone)</div>
+            <div class="comp-name">Serena Williams 🇺🇸</div>
+            <div class="comp-meta">Black Female Athlete</div>
+            <div class="comp-images-row">
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Original</span>
+                <img src="data/images/serena_williams.png" alt="Serena Williams Original" class="comp-img">
+              </div>
+              <div class="comp-img-wrap">
+                <span class="comp-lbl">Recon (K=20)</span>
+                <canvas id="canvasSerenaComp" width="37" height="50" class="comp-canvas"></canvas>
+              </div>
+            </div>
+            <div class="comp-stats">
+              <span>MSE @ K=20: <strong class="error-high">0.01084</strong> (4.6× Bush)</span>
+              <span class="comp-status-bad">⚠️ Facial Features Smoothed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RECONSTRUCTION ERROR CURVES (CANVAS CHART) -->
+        <div class="chart-container-card">
+          <div class="chart-header">
+            <h4 class="chart-title">Generalization Gap: Mean Squared Error (MSE) vs Number of Components ($K$)</h4>
+            <div class="chart-legend">
+              <span class="leg-item"><span class="leg-dot dot-bush"></span> George W. Bush (In-Training Baseline)</span>
+              <span class="leg-item"><span class="leg-dot dot-mandela"></span> Nelson Mandela (South Africa)</span>
+              <span class="leg-item"><span class="leg-dot dot-megawati"></span> Megawati Sukarnoputri (Indonesia)</span>
+              <span class="leg-item"><span class="leg-dot dot-serena"></span> Serena Williams (USA)</span>
+            </div>
+          </div>
+          <div class="canvas-chart-wrap">
+            <canvas id="chartMSE" width="800" height="260"></canvas>
+          </div>
+          <div class="chart-caption">
+            Notice how the error curve for Bush drops steeply and plateaus at lower error, while Megawati Sukarnoputri and Serena Williams consistently maintain 4× to 6× higher reconstruction error across all component depths.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: MATHEMATICAL TAKEAWAYS & ACCORDION -->
+    <section class="card guide-card">
+      <div class="card-header-flex">
+        <div>
+          <span class="badge badge-accent">Pedagogical Guide</span>
+          <h2 class="card-heading">5. Mathematical Principles & Ethical Takeaways</h2>
+          <p class="card-description">Essential concepts for Machine Learning, Linear Algebra, and Data Ethics students</p>
+        </div>
+      </div>
+
+      <div class="accordion">
+        <details class="accordion-item" open>
+          <summary class="accordion-header">
+            <span>📐 How Does PCA Turn 1,850 Pixels into Recognizable Faces?</span>
+            <span class="accordion-arrow">▼</span>
+          </summary>
+          <div class="accordion-body">
+            <p>Every 50×37 image is a vector in an 1,850-dimensional space ($\mathbb{R}^{1850}$). However, random vectors in this space look like TV static—not faces! Real faces occupy a much lower-dimensional manifold because facial pixels are <strong>intensely correlated</strong> (both eyes share illumination, cheekbones reflect light symmetrically, noses cast structured shadows).</p>
+            <p>PCA computes the eigenvectors of the centered data covariance matrix:</p>
+            <div class="math-block">
+              \mathbf{C} = \frac{1}{M} \sum_{i=1}^M (\mathbf{x}_i - \boldsymbol{\mu})(\mathbf{x}_i - \boldsymbol{\mu})^T
+            </div>
+            <p>The top eigenvectors (the <em>Eigenfaces</em>) are the directions of maximum variance. Projecting a face onto just 20 to 50 of these orthogonal vectors captures up to <strong>86%–89% of all facial variation</strong>, achieving a <strong>37× to 92× compression ratio</strong>.</p>
+          </div>
+        </details>
+
+        <details class="accordion-item">
+          <summary class="accordion-header">
+            <span>🌍 Why Does Training Skew Cause Representation Disparity?</span>
+            <span class="accordion-arrow">▼</span>
+          </summary>
+          <div class="accordion-body">
+            <p>PCA is an unsupervised optimization problem that minimizes the sum of squared reconstruction errors across the <strong>training distribution</strong>:</p>
+            <div class="math-block">
+              \min_{\mathbf{V}_K} \sum_{i \in \text{Train}} \|\mathbf{x}_i - (\boldsymbol{\mu} + \mathbf{V}_K \mathbf{V}_K^T (\mathbf{x}_i - \boldsymbol{\mu}))\|^2
+            </div>
+            <p>If 41% of the training images belong to George W. Bush and over 88% belong to White Western men, the eigenvectors $\mathbf{v}_k$ will naturally specialize in the directions of variance that matter <em>for that specific demographic</em> (e.g. Western eye sockets, receding hairlines, and European skin tones under Western press flashbulbs).</p>
+            <p>When evaluated on faces from underrepresented groups (women, non-white ethnicities, indigenous peoples), the basis lacks the specific orthogonal components needed to span their facial features. Consequently, their early reconstructions default to the Western mean face $\boldsymbol{\mu}$, leading to higher error, feature loss, and biased downstream facial classification.</p>
+          </div>
+        </details>
+
+        <details class="accordion-item">
+          <summary class="accordion-header">
+            <span>📜 Historical Context: Turk & Pentland (1991) to Modern Facial Recognition Audits</span>
+            <span class="accordion-arrow">▼</span>
+          </summary>
+          <div class="accordion-body">
+            <p>The Eigenface method was pioneered by Matthew Turk and Alex Pentland at MIT in 1991 (<em>"Eigenfaces for Recognition"</em>, Journal of Cognitive Neuroscience). It was the first practical real-time face recognition system.</p>
+            <p>Decades later, Joy Buolamwini and Timnit Gebru published their landmark study <strong>"Gender Shades" (2018)</strong>, auditing modern commercial deep learning face recognition systems. They demonstrated that error rates were below 1% for lighter-skinned men, but reached up to <strong>34.7% for darker-skinned women</strong>. The root cause was identical to what you see in this demo: training datasets that were heavily skewed toward Caucasian men from developed nations.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <div class="footer-left">
+        <strong>Eigenfaces & PCA Studio</strong> — Educational Demonstration inspired by scikit-learn & LFW.
+      </div>
+      <div class="footer-right">
+        <span class="footer-badge">Hosted via GitHub Pages</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
