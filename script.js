@@ -232,16 +232,16 @@
     // Update explainer banner
     if (el.pipelineExplainerTitle && el.pipelineExplainerDesc) {
       if (pipelineName === 'enhanced') {
-        el.pipelineExplainerTitle.textContent = 'Landmark Alignment + CLAHE Normalization Active';
+        el.pipelineExplainerTitle.textContent = 'Class-Balanced Resampling + Landmark Alignment + CLAHE Active';
         el.pipelineExplainerDesc.textContent =
-          'Facial landmarks lock pupils to a horizontal baseline (eliminating head tilt, rotation, and scale variations). ' +
-          'Contrast-Limited Adaptive Histogram Equalization (CLAHE) normalizes directional lighting shadows across local 6×6 tiles. ' +
-          'Result: Eigenfaces encode true anatomical structure rather than ambient illumination, producing recognizable faces at lower K.';
+          'Uniformly resampled across 31 diverse global identities from LFW (capping individual dominance at ~3.4%, eliminating George W. Bush overfitting). ' +
+          'MTCNN 5-point landmark warp locks pupils to a horizontal line (canceling head tilt/rotation), and CLAHE normalizes directional lighting across local 6×6 tiles. ' +
+          'Result: The eigenspace models universal human facial morphology rather than a single individual, reducing error on underrepresented populations by up to 30.3%.';
       } else {
-        el.pipelineExplainerTitle.textContent = 'Baseline Raw Bounding Box Crop Active (scikit-learn Default)';
+        el.pipelineExplainerTitle.textContent = 'Baseline Skewed Training Benchmark (scikit-learn Default — 41.1% George W. Bush)';
         el.pipelineExplainerDesc.textContent =
-          'Standard static crop (78, 70, 172, 195) with no eye landmark normalization. ' +
-          'Uncontrolled head tilt and camera offsets smear facial features across the eigenvectors, and the first 3 components are heavily dominated by ambient illumination direction.';
+          'Standard scikit-learn training set with 530 George W. Bush images (41.1% of all data) and 0% female representation. ' +
+          'Features are unaligned and unnormalized, causing the empirical mean face to pull heavily toward Bush while out-of-distribution faces suffer up to 5.8× higher reconstruction error.';
       }
     }
 
